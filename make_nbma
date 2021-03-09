@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# Copyright 2019 (c) Oleg Vlasenko
+#
+# Version 0.27
+# Date 29-Jan-2019
+#
+# Hook script to up Non-broadcast multiple-access network (ISATAP version)
+#
+# Softlink this script to:
+#   /etc/network/if-pre-up.d/make_nbma
+#   /etc/network/if-post-down.d/make_nbma
+#
+############################################################################
+# Example config file /etc/network/interfaces/85-mgre0.cfg
+#
+# My external internface ip 198.51.100.1
+# Ip of my tunnel end 192.0.2.225
+# Network of tunnel BCast block as key for easy remebering
+#
+#auto mgre0
+#iface mgre0 inet static
+#	address 192.0.2.225
+#	netmask 255.255.255.248
+#	local 198.51.100.1
+#	mgrekey 192.0.2.224
+#
+# Add at /etc/network/interfaces
+#
+# ....
+# source "/etc/network/interfaces.d/*.cfg"
+# ....
+#
+############################################################################
+nbma_post_down () {
+
+  [ "${MODE}" = "stop" ] || return 0
+
+  [ "${IFACE}"      ]    || return 0
+  [ "${IF_MGREKEY}" ]    || return 0
+
+  ip link del ${IFACE} > /dev/null 2>/dev/null
+  return 0
+}
+############################################################################
+nbma_pre_up () {
+
+  [ "${MODE}" = "start" ] || return 0
+
+  [ "${IFACE}"      ]     || return 0
+  [ "${IF_LOCAL}"   ]     || return 0
+  [ "${IF_MGREKEY}" ]     || return 0
+
+  # Setup NET mgre tunnel
+  ip tunnel add local ${IF_LOCAL} ${IFACE} mode gre key ${IF_MGREKEY} ttl 255
+
+  return 0
+}
+############################################################################
+case "${PHASE}" in
+      post-down) nbma_post_down ;;
+         pre-up) nbma_pre_up ;;
+              *) echo "This is ifupdown hook for pre-up and post-down actions"
+                 ;;
+esac
+
+exit 0
+############################################################################

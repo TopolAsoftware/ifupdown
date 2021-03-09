@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# Copyright 2019 (c) Oleg Vlasenko (vop@unity.net)
+#
+# Version 0.10
+# Date 01-Feb-2019
+#
+# Hook script to up macvlan interface
+#
+# Softlink this script to:
+#   /etc/network/if-pre-up.d/make_macvlan
+#   /etc/network/if-post-down.d/make_macvlan
+#
+############################################################################
+# Example config file /etc/network/interfaces/85-mac0.cfg
+#
+#auto mac0
+#iface mac0 inet static
+#	macvlan_raw eth0
+#       macvlan_mac 22:33:44:55:66:78
+#	address 192.0.2.10
+#	netmask 255.255.255.0
+#	.... ( and so on )
+#
+############################################################################
+# Add at /etc/network/interfaces
+#
+# ....
+# source "/etc/network/interfaces.d/*.cfg"
+# ....
+#
+############################################################################
+macvlan_error () {
+    echo ERROR! $*
+    exit 0
+}
+############################################################################
+# Check variables
+[ "${IFACE}" ]          || macvlan_error "Variable IFACE not defined!"
+
+# Do nothing for not our interfaces
+[ "${IF_MACVLAN_RAW}" ] || exit 0
+
+############################################################################
+macvlan_post_down () {
+
+    ip link show dev "$IFACE" > /dev/null 2>&1 || return 0
+    ip link delete "$IFACE" type macvlan > /dev/null 2>&1
+
+    return 0
+}
+############################################################################
+macvlan_pre_up () {
+
+    macvlan_post_down
+
+    if [ "${IF_MACVLAN_MAC}" ]; then
+        ip link add link "$IF_MACVLAN_RAW" address "$IF_MACVLAN_MAC" dev "$IFACE" type macvlan
+    else
+        ip link add link "$IF_MACVLAN_MAC" dev "$IFACE" type macvlan
+    fi
+    
+    ip link set "$IFACE" up
+
+    return 0
+}
+############################################################################
+case "${PHASE}" in
+      post-down) macvlan_post_down ;;
+         pre-up) macvlan_pre_up ;;
+              *) echo "This is ifupdown hook for pre-up and post-down actions"
+                 ;;
+esac
+
+exit 0
+############################################################################
