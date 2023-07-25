@@ -1,6 +1,6 @@
 # ifupdown
 
-Here I place some my useful files for ifupdown metwork configuration
+Here I place some my useful files for ifupdown network configuration
 
 **make_macvlan** - easy hook script to up macvlan interface
 
