@@ -2,8 +2,8 @@
 #
 # Copyright 2019 (c) Oleg Vlasenko
 #
-# Version 0.27
-# Date 29-Jan-2019
+# Version 0.28
+# Date 25-Jul-2023
 #
 # Hook script to up Non-broadcast multiple-access network (ISATAP version)
 #
@@ -31,6 +31,9 @@
 # source "/etc/network/interfaces.d/*.cfg"
 # ....
 #
+#
+#  You can use default value: mgrekey auto
+#
 ############################################################################
 nbma_post_down () {
 
@@ -50,6 +53,12 @@ nbma_pre_up () {
   [ "${IFACE}"      ]     || return 0
   [ "${IF_LOCAL}"   ]     || return 0
   [ "${IF_MGREKEY}" ]     || return 0
+
+  # Use auto default (broadcast) mgre key
+  if [ "${IF_MGREKEY}" = "auto" ]; then
+    [ "${IF_BROADCAST}" ] || return 0
+    IF_MGREKEY="${IF_BROADCAST}"
+  fi
 
   # Setup NET mgre tunnel
   ip tunnel add local ${IF_LOCAL} ${IFACE} mode gre key ${IF_MGREKEY} ttl 255
